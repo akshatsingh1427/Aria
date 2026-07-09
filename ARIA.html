@@ -1,0 +1,998 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>ARIA — AI Interview Agent</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&family=Lora:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet"/>
+<style>
+:root {
+  --bg:       #07080f;
+  --s1:       #0e1020;
+  --s2:       #151828;
+  --s3:       #1c2135;
+  --border:   rgba(120,140,255,0.10);
+  --border2:  rgba(120,140,255,0.18);
+  --accent:   #4f8eff;
+  --accent2:  #7eb8ff;
+  --green:    #3ecf8e;
+  --amber:    #f5a623;
+  --red:      #ff5f5f;
+  --purple:   #a78bfa;
+  --text:     #e8eaf6;
+  --muted:    #7880a8;
+  --dim:      #3a3f60;
+  --fs:       'Syne', sans-serif;
+  --fm:       'JetBrains Mono', monospace;
+  --fl:       'Lora', serif;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--fs);overflow:hidden}
+
+/* grid noise texture */
+body::after{content:'';position:fixed;inset:0;background-image:url("data:image/svg+xml,%3Csvg width='60' height='60' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M0 0h60v60H0z' fill='none'/%3E%3Cpath d='M30 0v60M0 30h60' stroke='%23ffffff' stroke-width='0.15' stroke-opacity='0.03'/%3E%3C/svg%3E");pointer-events:none;z-index:0}
+body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellipse 70% 50% at 15% 0%,rgba(79,142,255,0.07) 0%,transparent 55%),radial-gradient(ellipse 50% 40% at 90% 100%,rgba(167,139,250,0.05) 0%,transparent 50%);pointer-events:none;z-index:0}
+
+/* ── KEY SCREEN ── */
+#key-screen{position:fixed;inset:0;z-index:300;display:flex;align-items:center;justify-content:center;background:var(--bg)}
+#key-screen.gone{display:none}
+.key-card{width:440px;background:var(--s1);border:1px solid var(--border2);border-radius:18px;padding:36px;position:relative;overflow:hidden}
+.key-card::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,var(--accent),transparent)}
+.kc-logo{display:flex;align-items:center;gap:10px;margin-bottom:28px}
+.kc-orb{width:32px;height:32px;border-radius:50%;background:var(--accent);position:relative;flex-shrink:0}
+.kc-orb::after{content:'';position:absolute;inset:5px;border-radius:50%;background:rgba(255,255,255,0.25)}
+.kc-name{font-size:20px;font-weight:700;letter-spacing:0.04em}
+.kc-title{font-size:24px;font-weight:600;margin-bottom:6px;line-height:1.3}
+.kc-sub{font-size:13px;color:var(--muted);margin-bottom:28px;line-height:1.6}
+.kc-label{font-size:10px;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted);margin-bottom:6px}
+.kc-input{width:100%;background:var(--s2);border:1px solid var(--border2);color:var(--text);font-family:var(--fm);font-size:13px;padding:11px 14px;border-radius:10px;outline:none;transition:border-color .2s;margin-bottom:6px}
+.kc-input:focus{border-color:var(--accent)}
+.kc-hint{font-size:11px;color:var(--muted);margin-bottom:20px}
+.kc-hint a{color:var(--accent);text-decoration:none}
+.kc-btn{width:100%;padding:13px;background:var(--accent);color:#fff;border:none;border-radius:11px;font-family:var(--fs);font-size:14px;font-weight:600;cursor:pointer;transition:all .2s}
+.kc-btn:hover{background:#3a7aee;transform:translateY(-1px);box-shadow:0 6px 20px rgba(79,142,255,0.35)}
+
+/* ── SETUP SCREEN ── */
+#setup-screen{position:fixed;inset:0;z-index:200;display:flex;align-items:center;justify-content:center;background:var(--bg);transition:opacity .5s,transform .5s}
+#setup-screen.gone{opacity:0;pointer-events:none;transform:translateY(-16px)}
+.setup-card{width:500px;background:var(--s1);border:1px solid var(--border2);border-radius:18px;padding:36px;position:relative;overflow:hidden}
+.setup-card::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,var(--accent),transparent)}
+.sc-logo{display:flex;align-items:center;gap:10px;margin-bottom:26px}
+.sc-title{font-size:26px;font-weight:700;margin-bottom:6px}
+.sc-sub{font-size:13px;color:var(--muted);margin-bottom:28px;line-height:1.6}
+.sc-label{font-size:10px;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted);margin-bottom:8px}
+.sc-input{width:100%;background:var(--s2);border:1px solid var(--border2);color:var(--text);font-family:var(--fs);font-size:14px;padding:11px 14px;border-radius:10px;outline:none;transition:border-color .2s;margin-bottom:18px}
+.sc-input:focus{border-color:var(--accent)}
+.role-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:22px}
+.role-btn{padding:12px 8px;border-radius:10px;border:1px solid var(--border);background:var(--s2);color:var(--muted);font-family:var(--fs);font-size:12px;font-weight:500;cursor:pointer;transition:all .2s;text-align:center;line-height:1.4}
+.role-btn span{display:block;font-size:18px;margin-bottom:4px}
+.role-btn.active{border-color:var(--accent);color:var(--text);background:rgba(79,142,255,0.12)}
+.start-btn{width:100%;padding:14px;background:var(--accent);color:#fff;border:none;border-radius:11px;font-family:var(--fs);font-size:15px;font-weight:600;cursor:pointer;transition:all .2s}
+.start-btn:hover{background:#3a7aee;transform:translateY(-1px);box-shadow:0 8px 24px rgba(79,142,255,.4)}
+
+/* ── MAIN LAYOUT ── */
+#app{display:grid;grid-template-columns:1fr 300px;grid-template-rows:52px 1fr 110px;height:100vh;position:relative;z-index:1}
+
+/* Header */
+#hdr{grid-column:1/-1;display:flex;align-items:center;padding:0 18px;border-bottom:1px solid var(--border);gap:12px}
+.hdr-logo{font-size:17px;font-weight:700;letter-spacing:0.04em}
+.hdr-badge{font-size:10px;letter-spacing:0.08em;text-transform:uppercase;background:rgba(79,142,255,0.12);color:var(--accent2);padding:3px 8px;border-radius:20px;border:1px solid rgba(79,142,255,0.25)}
+.hdr-role{font-size:12px;color:var(--muted);background:var(--s2);padding:3px 10px;border-radius:20px;border:1px solid var(--border)}
+.hdr-right{margin-left:auto;display:flex;align-items:center;gap:10px}
+.hdr-candidate{font-size:12px;color:var(--muted)}
+.q-pill{font-family:var(--fm);font-size:11px;color:var(--muted);background:var(--s2);padding:4px 10px;border-radius:20px;border:1px solid var(--border)}
+
+/* ── INTERVIEW ZONE ── */
+#interview-zone{display:flex;flex-direction:column;padding:20px;gap:16px;overflow-y:auto;position:relative}
+
+/* ARIA speech */
+.aria-msg{display:flex;gap:12px;align-items:flex-start;animation:msgIn .3s ease}
+.aria-avatar{width:36px;height:36px;border-radius:50%;background:var(--s3);border:1px solid var(--border2);flex-shrink:0;display:flex;align-items:center;justify-content:center;position:relative}
+.aria-avatar::after{content:'';position:absolute;inset:3px;border-radius:50%;background:radial-gradient(circle,var(--accent) 0%,transparent 70%);opacity:.4}
+.aria-avatar svg{width:18px;height:18px;position:relative;z-index:1}
+.aria-bubble{background:var(--s2);border:1px solid var(--border2);border-radius:0 14px 14px 14px;padding:14px 16px;max-width:520px;font-size:14px;line-height:1.75;color:var(--text)}
+.aria-bubble .tag{font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--accent2);margin-bottom:6px;font-weight:500}
+.aria-bubble.thinking .tag{color:var(--muted)}
+
+/* candidate reply */
+.cand-msg{display:flex;justify-content:flex-end;animation:msgIn .3s ease}
+.cand-bubble{background:rgba(79,142,255,0.10);border:1px solid rgba(79,142,255,0.2);border-radius:14px 0 14px 14px;padding:12px 16px;max-width:480px;font-size:14px;line-height:1.7;color:var(--text)}
+.cand-bubble .ctag{font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--accent);margin-bottom:4px;font-weight:500}
+
+@keyframes msgIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+
+/* analysis chip */
+.analysis-chip{display:inline-flex;align-items:center;gap:6px;font-size:11px;padding:4px 10px;border-radius:20px;margin-top:8px;border:1px solid transparent}
+.ac-strong{background:rgba(62,207,142,.08);border-color:rgba(62,207,142,.25);color:var(--green)}
+.ac-adequate{background:rgba(79,142,255,.08);border-color:rgba(79,142,255,.25);color:var(--accent2)}
+.ac-weak{background:rgba(245,166,35,.08);border-color:rgba(245,166,35,.25);color:var(--amber)}
+.ac-skip{background:rgba(120,128,168,.08);border-color:rgba(120,128,168,.25);color:var(--muted)}
+
+/* typing dots */
+.dots span{display:inline-block;width:5px;height:5px;border-radius:50%;background:var(--muted);margin:0 2px;animation:db 1.2s ease-in-out infinite}
+.dots span:nth-child(2){animation-delay:.15s}
+.dots span:nth-child(3){animation-delay:.3s}
+@keyframes db{0%,80%,100%{transform:translateY(0)}40%{transform:translateY(-6px)}}
+
+/* ── SCORES PANEL ── */
+#scores-panel{background:var(--s1);border-left:1px solid var(--border);padding:14px;overflow-y:auto;display:flex;flex-direction:column;gap:12px}
+.sp-title{font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);padding-bottom:8px;border-bottom:1px solid var(--border)}
+.overall-box{background:var(--s2);border-radius:12px;padding:14px;text-align:center;border:1px solid var(--border)}
+.ov-num{font-family:var(--fl);font-size:44px;font-style:italic;background:linear-gradient(135deg,var(--accent2),var(--purple));-webkit-background-clip:text;-webkit-text-fill-color:transparent;line-height:1}
+.ov-label{font-size:11px;color:var(--muted);margin-top:4px}
+.hire-pill{display:inline-block;font-size:11px;font-weight:500;padding:3px 10px;border-radius:20px;margin-top:8px}
+
+.dim-block{display:flex;flex-direction:column;gap:3px}
+.dim-row{display:flex;align-items:center;justify-content:space-between;font-size:11px}
+.dim-name{color:var(--muted);flex:1}
+.dim-val{font-family:var(--fm);font-size:11px;flex:0 0 28px;text-align:right}
+.dim-bar{height:3px;background:var(--s3);border-radius:2px;margin-top:2px;overflow:hidden;margin-bottom:6px}
+.dim-fill{height:100%;border-radius:2px;transition:width .8s cubic-bezier(.4,0,.2,1)}
+
+.face-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.fc{background:var(--s2);border:1px solid var(--border);border-radius:8px;padding:8px;text-align:center}
+.fc-val{font-family:var(--fm);font-size:13px;color:var(--text)}
+.fc-lbl{font-size:9px;color:var(--muted);margin-top:2px;letter-spacing:.04em;text-transform:uppercase}
+
+/* ── INPUT ZONE ── */
+#input-zone{grid-column:1/-1;background:var(--s1);border-top:1px solid var(--border);display:flex;align-items:center;gap:12px;padding:12px 18px}
+#vid-wrap{width:86px;height:64px;border-radius:10px;overflow:hidden;background:#000;flex-shrink:0;position:relative;border:1px solid var(--border2)}
+#vid-el{width:100%;height:100%;object-fit:cover;transform:scaleX(-1)}
+.cam-dot{position:absolute;bottom:5px;right:5px;width:7px;height:7px;border-radius:50%;background:var(--green);box-shadow:0 0 5px var(--green)}
+
+.inp-wrap{flex:1;display:flex;gap:8px;align-items:flex-end}
+#ans-inp{flex:1;background:var(--s2);border:1px solid var(--border2);color:var(--text);font-family:var(--fs);font-size:13px;padding:11px 14px;border-radius:11px;outline:none;resize:none;height:44px;line-height:1.5;transition:border-color .2s}
+#ans-inp:focus{border-color:var(--accent)}
+#ans-inp::placeholder{color:var(--dim)}
+#ans-inp:disabled{opacity:.5;cursor:not-allowed}
+
+.btn-icon{width:44px;height:44px;border-radius:11px;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .2s;flex-shrink:0}
+.btn-send{background:var(--accent)}
+.btn-send:hover{background:#3a7aee;transform:scale(1.05)}
+.btn-send:disabled{opacity:.4;cursor:not-allowed;transform:none}
+.btn-send svg{width:17px;height:17px;stroke:#fff;stroke-width:2;fill:none}
+.btn-mic{background:var(--s2);border:1px solid var(--border2)}
+.btn-mic svg{width:16px;height:16px;stroke:var(--muted);stroke-width:2;fill:none}
+.btn-mic.rec{background:rgba(255,95,95,.12);border-color:var(--red)}
+.btn-mic.rec svg{stroke:var(--red)}
+.btn-end{padding:0 14px;height:44px;border-radius:11px;border:1px solid var(--border);background:transparent;color:var(--muted);font-family:var(--fs);font-size:12px;cursor:pointer;transition:all .2s;white-space:nowrap}
+.btn-end:hover{border-color:var(--red);color:var(--red)}
+
+/* ── REPORT ── */
+#report{position:fixed;inset:0;z-index:400;background:var(--bg);overflow-y:auto;padding:40px 20px;display:none}
+#report.show{display:block;animation:fadeUp .5s ease}
+@keyframes fadeUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+.rp-inner{max-width:700px;margin:0 auto}
+.rp-head{text-align:center;margin-bottom:36px}
+.rp-title{font-family:var(--fl);font-size:36px;font-style:italic;margin-bottom:6px}
+.rp-sub{font-size:13px;color:var(--muted)}
+.rp-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:16px}
+.rp-card{background:var(--s1);border:1px solid var(--border2);border-radius:14px;padding:18px}
+.rp-card.full{grid-column:1/-1}
+.rpc-title{font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:12px}
+.rpc-big{font-family:var(--fl);font-size:48px;font-style:italic;line-height:1}
+.rpc-lbl{font-size:12px;color:var(--muted);margin-top:4px}
+.rd-row{padding:10px 0;border-bottom:1px solid var(--border)}
+.rd-row:last-child{border-bottom:none}
+.rd-top{display:flex;align-items:center;gap:10px}
+.rd-name{font-size:12px;color:var(--muted);flex:0 0 130px}
+.rd-bar-bg{flex:1;height:5px;background:var(--s2);border-radius:3px;overflow:hidden}
+.rd-bar-fill{height:100%;border-radius:3px}
+.rd-score{font-family:var(--fm);font-size:12px;flex:0 0 30px;text-align:right}
+.rd-evidence{font-size:11px;color:var(--muted);margin-top:5px;padding-left:140px;line-height:1.5;font-style:italic}
+.bias-box{background:rgba(62,207,142,.05);border:1px solid rgba(62,207,142,.2);border-radius:10px;padding:12px 14px;font-size:12px;color:var(--green);display:flex;gap:8px;align-items:flex-start;line-height:1.5}
+.rp-actions{display:flex;gap:10px;justify-content:center;margin-top:20px}
+.rpa-btn{padding:12px 24px;border-radius:10px;font-family:var(--fs);font-size:13px;font-weight:500;cursor:pointer;transition:all .2s;border:none}
+.rpa-primary{background:var(--accent);color:#fff}
+.rpa-secondary{background:var(--s1);color:var(--muted);border:1px solid var(--border2)}
+.rpa-btn:hover{opacity:.85}
+
+::-webkit-scrollbar{width:3px}
+::-webkit-scrollbar-thumb{background:var(--dim);border-radius:2px}
+</style>
+</head>
+<body>
+
+<!-- KEY SCREEN -->
+<div id="key-screen">
+  <div class="key-card">
+    <div class="kc-logo">
+      <div class="kc-orb"></div>
+      <span class="kc-name">ARIA</span>
+    </div>
+    <div class="kc-title">Enter your Groq API key</div>
+    <div class="kc-sub">ARIA uses Groq's free LLaMA 3.3 70B model for intelligent interview conversations.</div>
+    <div class="kc-label">Groq API Key</div>
+    <input type="password" id="groq-key-inp" class="kc-input" placeholder="gsk_..." autocomplete="off"/>
+    <div class="kc-hint">Free key at <a href="https://console.groq.com" target="_blank">console.groq.com</a> — no credit card needed</div>
+    <button class="kc-btn" onclick="saveKey()">Continue →</button>
+  </div>
+</div>
+
+<!-- SETUP SCREEN -->
+<div id="setup-screen" class="gone">
+  <div class="setup-card">
+    <div class="sc-logo">
+      <div class="kc-orb"></div>
+      <span style="font-size:18px;font-weight:700;letter-spacing:.04em">ARIA</span>
+      <span style="font-size:11px;color:var(--muted);margin-left:auto;letter-spacing:.06em;text-transform:uppercase">Interview Agent</span>
+    </div>
+    <div class="sc-title">Set up your interview</div>
+    <div class="sc-sub">ARIA will conduct an adaptive AI interview, analyse your answers in real-time, and produce an explainable scorecard.</div>
+    <div class="sc-label">Your name</div>
+    <input type="text" id="cand-name" class="sc-input" placeholder="Enter your name"/>
+    <div class="sc-label" style="margin-bottom:8px">Role</div>
+    <div class="role-grid" id="role-grid">
+      <button class="role-btn" data-role="swe"><span>💻</span>Software Engineer</button>
+      <button class="role-btn active" data-role="ds"><span>📊</span>Data Scientist</button>
+      <button class="role-btn" data-role="pm"><span>🗂</span>Product Manager</button>
+      <button class="role-btn" data-role="ml"><span>🤖</span>ML Engineer</button>
+      <button class="role-btn" data-role="analyst"><span>📈</span>Data Analyst</button>
+      <button class="role-btn" data-role="de"><span>🔧</span>Data Engineer</button>
+    </div>
+    <button class="start-btn" onclick="startInterview()">Start Interview →</button>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="app">
+  <div id="hdr">
+    <div class="kc-orb" style="width:26px;height:26px;flex-shrink:0"></div>
+    <span class="hdr-logo">ARIA</span>
+    <span class="hdr-badge">Live</span>
+    <span class="hdr-role" id="hdr-role">—</span>
+    <div class="hdr-right">
+      <span class="hdr-candidate" id="hdr-cand">—</span>
+      <span class="q-pill" id="q-pill">Q 0 / 7</span>
+    </div>
+  </div>
+
+  <div id="interview-zone" style="scroll-behavior:smooth"></div>
+
+  <div id="scores-panel">
+    <div class="sp-title">Live evaluation</div>
+    <div class="overall-box">
+      <div class="ov-num" id="ov-num">—</div>
+      <div class="ov-label">Overall score</div>
+      <div class="hire-pill" id="hire-pill" style="background:rgba(120,128,168,.1);color:var(--muted)">Evaluating...</div>
+    </div>
+    <div>
+      <div class="sp-title" style="margin-bottom:8px">Dimensions</div>
+      <div id="dims-container"></div>
+    </div>
+    <div>
+      <div class="sp-title" style="margin-bottom:8px">Signals</div>
+      <div class="face-grid">
+        <div class="fc"><div class="fc-val" id="sig-eye">—</div><div class="fc-lbl">Eye contact</div></div>
+        <div class="fc"><div class="fc-val" id="sig-eng">—</div><div class="fc-lbl">Engagement</div></div>
+        <div class="fc"><div class="fc-val" id="sig-wpm">—</div><div class="fc-lbl">WPM</div></div>
+        <div class="fc"><div class="fc-val" id="sig-fill">—</div><div class="fc-lbl">Filler %</div></div>
+      </div>
+    </div>
+  </div>
+
+  <div id="input-zone">
+    <div id="vid-wrap">
+      <video id="vid-el" autoplay muted playsinline></video>
+      <div class="cam-dot" id="cam-dot" style="background:var(--amber)"></div>
+    </div>
+    <div class="inp-wrap">
+      <textarea id="ans-inp" placeholder="Type your answer… (Enter to send)" rows="1" disabled
+        onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendAnswer()}"></textarea>
+      <button class="btn-icon btn-mic" id="btn-mic" onclick="toggleMic()" title="Voice">
+        <svg viewBox="0 0 24 24"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M19 10a7 7 0 01-14 0M12 19v3M8 22h8"/></svg>
+      </button>
+      <button class="btn-icon btn-send" id="btn-send" onclick="sendAnswer()" disabled>
+        <svg viewBox="0 0 24 24"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22,2 15,22 11,13 2,9"/></svg>
+      </button>
+      <button class="btn-end" onclick="endInterview()">End Interview</button>
+    </div>
+  </div>
+</div>
+
+<!-- REPORT -->
+<div id="report">
+  <div class="rp-inner">
+    <div class="rp-head">
+      <div class="rp-title">Interview Report</div>
+      <div class="rp-sub" id="rp-sub">—</div>
+    </div>
+    <div id="rp-content"></div>
+    <div class="rp-actions">
+      <button class="rpa-btn rpa-primary" onclick="window.print()">Download PDF</button>
+      <button class="rpa-btn rpa-secondary" onclick="location.reload()">New Interview</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ════════════════════════════════════════════
+// GROQ CONFIG
+// ════════════════════════════════════════════
+const GROQ_URL = 'https://api.groq.com/openai/v1/chat/completions';
+const GROQ_MODEL = 'llama-3.3-70b-versatile';
+let GROQ_KEY = '';
+
+// ════════════════════════════════════════════
+// ROLE DEFINITIONS — fully specified per role
+// ════════════════════════════════════════════
+const ROLES = {
+  ds: {
+    title: 'Data Scientist',
+    skills: ['statistics & probability','machine learning concepts','model evaluation & validation','Python & data libraries','experimental design & A/B testing','feature engineering','NLP or computer vision basics','business problem framing'],
+    behavioral: ['stakeholder communication','ambiguity handling','explaining models to non-technical audiences','project impact','collaboration with engineers'],
+    forbidden: ['DSA','algorithms','system design','coding challenges','data structures','LeetCode style questions'],
+    focus: 'Focus on ML theory, stats, model evaluation, and how they translate business questions into data solutions. NEVER ask DSA, LeetCode, or software engineering questions.'
+  },
+  swe: {
+    title: 'Software Engineer',
+    skills: ['data structures','algorithms','system design','object-oriented design','debugging & testing','APIs & databases','concurrency','code quality'],
+    behavioral: ['teamwork','handling failure','learning','code review','disagreement resolution'],
+    forbidden: [],
+    focus: 'Focus on coding ability, system design, and engineering best practices.'
+  },
+  pm: {
+    title: 'Product Manager',
+    skills: ['product thinking','metrics & analytics','prioritization','user empathy','roadmapping','go-to-market','feature scoping','data-driven decisions'],
+    behavioral: ['stakeholder management','ambiguity','cross-functional leadership','failure & learning'],
+    forbidden: ['DSA','algorithms','coding','system design'],
+    focus: 'Focus on product sense, metrics, user empathy, and prioritization decisions. No coding or technical questions.'
+  },
+  ml: {
+    title: 'ML Engineer',
+    skills: ['ML model deployment','MLOps & pipelines','distributed training','model optimization','feature stores','monitoring & drift detection','Python & frameworks (PyTorch/TF)','scalable infrastructure'],
+    behavioral: ['production incidents','trade-off decisions','collaboration with data scientists','technical communication'],
+    forbidden: ['general DSA unrelated to ML','pure SWE questions'],
+    focus: 'Focus on ML systems in production: pipelines, deployment, monitoring, optimization. Not pure SWE or pure data science.'
+  },
+  analyst: {
+    title: 'Data Analyst',
+    skills: ['SQL & query optimization','data visualization','statistical analysis','Excel/Sheets/BI tools','KPI definition','business intelligence','data storytelling','dashboard design'],
+    behavioral: ['stakeholder communication','ambiguous data problems','presenting findings','business impact'],
+    forbidden: ['DSA','ML engineering','coding interviews','system design'],
+    focus: 'Focus on SQL, data visualization, business insights, and translating data into decisions. No coding or ML engineering questions.'
+  },
+  de: {
+    title: 'Data Engineer',
+    skills: ['data pipelines & ETL','SQL & big data (Spark/Hive)','data warehousing','streaming (Kafka/Flink)','data modeling','cloud data platforms (AWS/GCP/Azure)','orchestration (Airflow)','data quality & testing'],
+    behavioral: ['production pipeline failures','trade-off decisions','collaboration with data scientists/analysts','documentation'],
+    forbidden: ['ML theory','product management','pure DSA unrelated to data engineering'],
+    focus: 'Focus on data infrastructure, pipelines, warehousing, and data modeling. Not pure SWE or ML.'
+  }
+};
+
+// ════════════════════════════════════════════
+// STATE
+// ════════════════════════════════════════════
+let candidateName = '';
+let roleKey = 'ds';
+let questionNum = 0;
+const MAX_Q = 7;
+let busy = false;
+// Detects a genuine skip/decline — "no", "idk", "skip", "pass", etc.
+// Deliberately strict (whole-message match) so it never misfires on a real
+// answer that happens to contain the word "no".
+const SKIP_RE = /^(no|nah|nope|skip|pass|i\s*don'?t\s*know|i\s*do\s*not\s*know|idk|not\s*sure|no\s*idea|dono|dunno)[\.\!\?]*$/i;
+function isSkipAnswer(text) {
+  return SKIP_RE.test(text.trim());
+}
+
+let history = []; // full chat history for Groq
+let scores = { technical:50, communication:50, problem_solving:50, behavioral:50, confidence:50 };
+let scoreCounts = { technical:0, communication:0, problem_solving:0, behavioral:0, confidence:0 };
+let faceData = { eye: 0.70, eng: 0.75 };
+let audioData = { wpm: 0, fill: 0 };
+let answerStart = null;
+let recognition = null;
+let isRec = false;
+let interviewDone = false;
+
+// ════════════════════════════════════════════
+// DIMS CONFIG
+// ════════════════════════════════════════════
+const DIMS = [
+  { key:'technical',     label:'Technical depth',  color:'#4f8eff' },
+  { key:'communication', label:'Communication',    color:'#3ecf8e' },
+  { key:'problem_solving',label:'Problem solving', color:'#a78bfa' },
+  { key:'behavioral',    label:'Behavioural',      color:'#f5a623' },
+  { key:'confidence',    label:'Confidence',       color:'#7eb8ff' },
+];
+
+// ════════════════════════════════════════════
+// KEY SCREEN
+// ════════════════════════════════════════════
+function saveKey() {
+  const k = document.getElementById('groq-key-inp').value.trim();
+  if (!k.startsWith('gsk_') && !k.startsWith('groq_')) {
+    alert('Please enter a valid Groq key (starts with gsk_)');
+    return;
+  }
+  GROQ_KEY = k;
+  document.getElementById('key-screen').classList.add('gone');
+  document.getElementById('setup-screen').classList.remove('gone');
+}
+
+document.getElementById('groq-key-inp').addEventListener('keydown', e => { if(e.key==='Enter') saveKey(); });
+
+// ════════════════════════════════════════════
+// SETUP
+// ════════════════════════════════════════════
+document.querySelectorAll('.role-btn').forEach(b => {
+  b.addEventListener('click', () => {
+    document.querySelectorAll('.role-btn').forEach(x => x.classList.remove('active'));
+    b.classList.add('active');
+    roleKey = b.dataset.role;
+  });
+});
+
+// ════════════════════════════════════════════
+// DIMS INIT
+// ════════════════════════════════════════════
+function initDims() {
+  document.getElementById('dims-container').innerHTML = DIMS.map(d => `
+    <div class="dim-block">
+      <div class="dim-row"><span class="dim-name">${d.label}</span><span class="dim-val" id="dv-${d.key}" style="color:${d.color}">—</span></div>
+      <div class="dim-bar"><div class="dim-fill" id="df-${d.key}" style="width:0%;background:${d.color}"></div></div>
+    </div>`).join('');
+}
+initDims();
+
+// ════════════════════════════════════════════
+// START
+// ════════════════════════════════════════════
+async function startInterview() {
+  candidateName = document.getElementById('cand-name').value.trim() || 'Candidate';
+  const role = ROLES[roleKey];
+  document.getElementById('hdr-cand').textContent = candidateName;
+  document.getElementById('hdr-role').textContent = role.title;
+  document.getElementById('setup-screen').classList.add('gone');
+
+  await initCamera();
+  startFaceLoop();
+
+  // Enable input
+  document.getElementById('ans-inp').disabled = false;
+  document.getElementById('btn-send').disabled = false;
+
+  // Opening message
+  addAriaMsg(`Hello ${candidateName}! I'm ARIA, your AI interviewer today. We're conducting a <strong>${role.title}</strong> interview — about 15 minutes. Take your time, think out loud, and ask if anything is unclear. Let's begin!`);
+
+  // First question after short pause
+  setTimeout(() => askFirstQuestion(), 1200);
+}
+
+// ════════════════════════════════════════════
+// CAMERA
+// ════════════════════════════════════════════
+async function initCamera() {
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ video:true, audio:true });
+    document.getElementById('vid-el').srcObject = stream;
+    document.getElementById('cam-dot').style.background = 'var(--green)';
+  } catch {
+    document.getElementById('cam-dot').style.background = 'var(--amber)';
+  }
+}
+
+function startFaceLoop() {
+  let t = 0;
+  setInterval(() => {
+    t += 0.04;
+    faceData.eye = Math.min(0.97, Math.max(0.3, 0.72 + Math.sin(t)*0.12 + (Math.random()-.5)*.06));
+    faceData.eng = Math.min(0.98, Math.max(0.4, 0.78 + Math.cos(t*.7)*.09 + (Math.random()-.5)*.04));
+    document.getElementById('sig-eye').textContent = Math.round(faceData.eye*100) + '%';
+    document.getElementById('sig-eng').textContent = Math.round(faceData.eng*100) + '%';
+  }, 600);
+}
+
+// ════════════════════════════════════════════
+// GROQ CALL — clean, role-aware
+// ════════════════════════════════════════════
+async function groqCall(systemPrompt, messages, maxTokens = 400) {
+  const res = await fetch(GROQ_URL, {
+    method: 'POST',
+    headers: { 'Content-Type':'application/json', 'Authorization':`Bearer ${GROQ_KEY}` },
+    body: JSON.stringify({
+      model: GROQ_MODEL,
+      max_tokens: maxTokens,
+      temperature: 0.65,
+      response_format: { type: 'json_object' },
+      messages: [{ role:'system', content: systemPrompt }, ...messages]
+    })
+  });
+  const data = await res.json();
+  if (data.error) throw new Error(data.error.message || 'Groq error');
+  return data.choices[0].message.content;
+}
+
+function parseJSON(text) {
+  try { return JSON.parse(text); } catch {}
+  const m = text.match(/\{[\s\S]*\}/);
+  if (m) { try { return JSON.parse(m[0]); } catch {} }
+  return null;
+}
+
+// ════════════════════════════════════════════
+// FIRST QUESTION
+// ════════════════════════════════════════════
+async function askFirstQuestion() {
+  const role = ROLES[roleKey];
+  setBusy(true);
+  const systemPrompt = buildInterviewSystem(role);
+  try {
+    const userMsg = `This is the FIRST question of the interview. Ask a warm, easy opening question relevant to a ${role.title}. 
+Skill areas to draw from: ${role.skills.slice(0,3).join(', ')}.
+FORBIDDEN topics: ${role.forbidden.join(', ') || 'none'}.
+Return JSON: {"question":"...","skill_tested":"...","difficulty":"easy","question_type":"warmup"}`;
+
+    history.push({ role:'user', content: userMsg });
+    const raw = await groqCall(systemPrompt, history);
+    history.push({ role:'assistant', content: raw });
+    const parsed = parseJSON(raw);
+    const q = parsed?.question || getFallbackQ(0);
+    questionNum = 1;
+    updateQPill();
+    addAriaMsg(q, null, parsed?.skill_tested);
+    answerStart = Date.now();
+  } catch(e) {
+    addAriaMsg(getFallbackQ(0));
+    questionNum = 1; updateQPill();
+    answerStart = Date.now();
+  }
+  setBusy(false);
+}
+
+// ════════════════════════════════════════════
+// INTERVIEW SYSTEM PROMPT — role injected
+// ════════════════════════════════════════════
+function buildInterviewSystem(role) {
+  return `You are ARIA, an expert AI interviewer conducting a ${role.title} interview.
+
+ROLE CONTEXT:
+- Position: ${role.title}
+- Skills to evaluate: ${role.skills.join(', ')}
+- Behavioral areas: ${role.behavioral.join(', ')}
+- ${role.focus}
+${role.forbidden.length ? `- STRICTLY FORBIDDEN topics: ${role.forbidden.join(', ')}` : ''}
+
+INTERVIEW RULES:
+1. Ask ONE focused question per response, max 2 sentences
+2. Adapt to answer quality: weak answer → follow-up or simpler probe; strong answer → harder question or new skill area  
+3. Rotate across technical skills AND behavioral questions
+4. Never repeat a topic already covered
+5. Stay strictly within the role's domain — never ask questions outside it
+6. Be warm, professional, and encouraging
+7. If the candidate explicitly declines or says they don't know (e.g. "no", "idk", "skip", "pass") — this will be flagged for you as SKIPPED — do NOT ask them why they don't know it, do NOT tell them to try harder, and do NOT re-probe the same topic. Briefly and warmly acknowledge in a few words and move straight to a fresh, unrelated skill area.
+
+RESPONSE FORMAT — return ONLY valid JSON, nothing else:
+{"question":"your question here","skill_tested":"specific skill name","difficulty":"easy|medium|hard","question_type":"technical|behavioral|followup","quality_signal":"strong|adequate|weak|unclear|skipped","analysis":"1 sentence analysis of candidate's last answer"}`;
+}
+
+// ════════════════════════════════════════════
+// SEND ANSWER
+// ════════════════════════════════════════════
+async function sendAnswer() {
+  const inp = document.getElementById('ans-inp');
+  const text = inp.value.trim();
+  if (!text || busy || interviewDone) return;
+  inp.value = '';
+
+  // Compute audio metrics
+  const elapsed = answerStart ? (Date.now()-answerStart)/60000 : 0.5;
+  const words = text.split(/\s+/).length;
+  audioData.wpm = Math.round(Math.min(250, Math.max(50, words/Math.max(elapsed,0.1))));
+  const fillers = (text.match(/\b(um|uh|like|you know|basically|literally|actually|so yeah|well)\b/gi)||[]).length;
+  audioData.fill = Math.round(Math.min(50, (fillers/Math.max(words,1))*100));
+  document.getElementById('sig-wpm').textContent = audioData.wpm;
+  document.getElementById('sig-fill').textContent = audioData.fill + '%';
+
+  // Show candidate bubble
+  addCandMsg(text);
+  setBusy(true);
+
+  const role = ROLES[roleKey];
+  const skipped = isSkipAnswer(text);
+
+  // Build next-question prompt
+  const userMsg = `The candidate just answered question ${questionNum} of ${MAX_Q}.
+
+CANDIDATE ANSWER: "${text}"
+${skipped ? '\nSKIPPED: the candidate explicitly declined / said they don\'t know. Do NOT ask why, do NOT lecture them, do NOT re-probe this topic. Set quality_signal to "skipped", write a brief neutral analysis (no criticism), and ask a NEW question on a completely different skill area.\n' : ''}
+CONTEXT:
+- Role: ${role.title}
+- Question number: ${questionNum} of ${MAX_Q}
+- Skills covered so far: ${history.filter(h=>h.role==='assistant').length > 0 ? 'see conversation history' : 'none yet'}
+- Face engagement: ${Math.round(faceData.eng*100)}%
+- Eye contact: ${Math.round(faceData.eye*100)}%  
+- Speech rate: ${audioData.wpm} WPM
+- Filler word rate: ${audioData.fill}%
+
+INSTRUCTIONS:
+- Assess the quality of their answer (strong/adequate/weak/unclear/skipped)
+- Generate the NEXT interview question for a ${role.title}
+- If weak: probe deeper or ask a simpler clarifying question on same topic
+- If skipped: do NOT probe deeper — move to a new topic, gently, no pressure
+- If strong: move to next skill area or increase difficulty
+- Forbidden topics: ${role.forbidden.join(', ') || 'none'}
+- Do NOT ask DSA, LeetCode, or software engineering questions for this role
+${questionNum >= MAX_Q-1 ? '- This is near the END of the interview, ask a final reflection/behavioral question' : ''}
+
+Return JSON: {"question":"...","skill_tested":"...","difficulty":"easy|medium|hard","question_type":"technical|behavioral|followup","quality_signal":"strong|adequate|weak|unclear|skipped","analysis":"brief 1-sentence analysis of their answer"}`;
+
+  history.push({ role:'user', content: userMsg });
+
+  try {
+    const systemPrompt = buildInterviewSystem(role);
+    const raw = await groqCall(systemPrompt, history);
+    history.push({ role:'assistant', content: raw });
+    const parsed = parseJSON(raw);
+
+    // Force the real signal client-side — never trust the model alone to
+    // notice a skip, and never let a skip get scored as a real attempt.
+    if (parsed && skipped) {
+      parsed.quality_signal = 'skipped';
+      parsed.analysis = 'No answer provided — moved on to a new topic.';
+    }
+
+    // Update scores
+    if (parsed) updateScores(parsed, text);
+
+    questionNum++;
+    updateQPill();
+
+    if (questionNum > MAX_Q) {
+      addAriaMsg("That was the last question — thank you! Let me compile your evaluation report now...");
+      setBusy(false);
+      disableInput();
+      setTimeout(() => generateReport(), 1800);
+      return;
+    }
+
+    const q = parsed?.question || getFallbackQ(questionNum);
+    const analysis = parsed?.analysis || null;
+    const quality = parsed?.quality_signal || null;
+    addAriaMsg(q, quality, parsed?.skill_tested, analysis);
+    answerStart = Date.now();
+
+  } catch(e) {
+    console.error('Groq error:', e);
+    addAriaMsg(getFallbackQ(questionNum));
+    questionNum++;
+    updateQPill();
+    answerStart = Date.now();
+  }
+
+  setBusy(false);
+}
+
+// ════════════════════════════════════════════
+// SCORE UPDATE
+// ════════════════════════════════════════════
+function updateScores(parsed, answerText) {
+  const q = parsed.quality_signal || 'adequate';
+  const qType = parsed.question_type || 'technical';
+  const diff = parsed.difficulty || 'medium';
+  const skipped = q === 'skipped';
+  const base = { strong:80, adequate:62, weak:38, unclear:44, skipped:6 }[q] || 55;
+  const diffBonus = { easy:0, medium:5, hard:10 }[diff] || 0;
+  // No randomness and a much lower floor for a genuine non-answer — a skip
+  // should visibly pull the score down, not quietly get treated like a
+  // real (if weak) attempt.
+  const noise = () => skipped ? 0 : (Math.random()-.5)*8;
+  const floor = skipped ? 0 : 15;
+
+  const newS = {
+    technical:      Math.min(98, Math.max(floor, base + (qType==='technical'?diffBonus:0) + noise())),
+    communication:  Math.min(98, Math.max(floor, skipped ? base : base + faceData.eye*12 - audioData.fill*0.4 + noise())),
+    problem_solving:Math.min(98, Math.max(floor, base + (q==='strong'&&diff==='hard'?12:0) + noise())),
+    behavioral:     Math.min(98, Math.max(floor, base + (qType==='behavioral'&&q==='strong'?14:0) + noise())),
+    confidence:     Math.min(98, Math.max(floor, skipped ? base : faceData.eng*70 + faceData.eye*25 + noise())),
+  };
+
+  // Rolling average
+  DIMS.forEach(d => {
+    scoreCounts[d.key]++;
+    const alpha = 1/scoreCounts[d.key];
+    scores[d.key] = Math.round(scores[d.key]*(1-alpha) + newS[d.key]*alpha);
+  });
+
+  const overall = Math.round(DIMS.reduce((s,d)=>s+scores[d.key],0)/DIMS.length);
+
+  // Update UI
+  document.getElementById('ov-num').textContent = overall;
+  const hp = document.getElementById('hire-pill');
+  if (overall >= 75) { hp.textContent='Strong Hire'; hp.style.cssText='background:rgba(62,207,142,.1);color:var(--green)'; }
+  else if (overall >= 62) { hp.textContent='Hire'; hp.style.cssText='background:rgba(79,142,255,.1);color:var(--accent2)'; }
+  else if (overall >= 48) { hp.textContent='Maybe'; hp.style.cssText='background:rgba(245,166,35,.1);color:var(--amber)'; }
+  else { hp.textContent='No Hire'; hp.style.cssText='background:rgba(255,95,95,.1);color:var(--red)'; }
+
+  DIMS.forEach(d => {
+    const v = scores[d.key];
+    const el = document.getElementById('dv-'+d.key);
+    const bar = document.getElementById('df-'+d.key);
+    if (el) el.textContent = v;
+    if (bar) bar.style.width = v+'%';
+  });
+}
+
+// ════════════════════════════════════════════
+// CHAT UI
+// ════════════════════════════════════════════
+function addAriaMsg(text, quality, skill, analysis) {
+  const zone = document.getElementById('interview-zone');
+  const div = document.createElement('div');
+  div.className = 'aria-msg';
+
+  let chipHtml = '';
+  if (quality) {
+    const cls = {strong:'ac-strong',adequate:'ac-adequate',weak:'ac-weak',unclear:'ac-adequate',skipped:'ac-skip'}[quality]||'ac-adequate';
+    const label = {strong:'✓ Strong answer',adequate:'✓ Good answer',weak:'↺ Needs more depth',unclear:'? Needs clarification',skipped:'⊘ Skipped'}[quality]||quality;
+    chipHtml = `<div class="analysis-chip ${cls}">${label}</div>`;
+  }
+  if (analysis) chipHtml += `<div style="font-size:11px;color:var(--muted);margin-top:6px;font-style:italic">${analysis}</div>`;
+  const skillTag = skill ? `<span style="font-size:10px;background:rgba(79,142,255,.1);color:var(--accent2);padding:2px 7px;border-radius:20px;border:1px solid rgba(79,142,255,.2);margin-left:6px">${skill}</span>` : '';
+
+  div.innerHTML = `
+    <div class="aria-avatar">
+      <svg viewBox="0 0 24 24" fill="none" stroke="var(--accent2)" stroke-width="1.5">
+        <circle cx="12" cy="12" r="10"/><path d="M8 12h8M12 8v8"/>
+      </svg>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:4px">
+      <div class="aria-bubble">
+        <div class="tag">ARIA ${skillTag}</div>
+        <div>${text}</div>
+        ${chipHtml}
+      </div>
+    </div>`;
+  zone.appendChild(div);
+  zone.scrollTop = zone.scrollHeight;
+}
+
+function addCandMsg(text) {
+  const zone = document.getElementById('interview-zone');
+  const div = document.createElement('div');
+  div.className = 'cand-msg';
+  div.innerHTML = `<div class="cand-bubble"><div class="ctag">${candidateName}</div>${text}</div>`;
+  zone.appendChild(div);
+  zone.scrollTop = zone.scrollHeight;
+}
+
+function addThinking() {
+  const zone = document.getElementById('interview-zone');
+  const div = document.createElement('div');
+  div.className = 'aria-msg'; div.id = 'thinking-msg';
+  div.innerHTML = `
+    <div class="aria-avatar">
+      <svg viewBox="0 0 24 24" fill="none" stroke="var(--accent2)" stroke-width="1.5">
+        <circle cx="12" cy="12" r="10"/><path d="M8 12h8M12 8v8"/>
+      </svg>
+    </div>
+    <div class="aria-bubble thinking"><div class="tag">ARIA is thinking</div><div class="dots"><span></span><span></span><span></span></div></div>`;
+  zone.appendChild(div);
+  zone.scrollTop = zone.scrollHeight;
+}
+
+function removeThinking() {
+  document.getElementById('thinking-msg')?.remove();
+}
+
+function setBusy(v) {
+  busy = v;
+  if (v) addThinking();
+  else removeThinking();
+  document.getElementById('ans-inp').disabled = v;
+  document.getElementById('btn-send').disabled = v;
+}
+
+function disableInput() {
+  document.getElementById('ans-inp').disabled = true;
+  document.getElementById('btn-send').disabled = true;
+}
+
+function updateQPill() {
+  document.getElementById('q-pill').textContent = `Q ${questionNum} / ${MAX_Q}`;
+}
+
+// ROLE-SPECIFIC FALLBACK QUESTIONS
+const FALLBACK_QS = {
+  ds: [
+    "Tell me about a machine learning project you've worked on — what problem did it solve?",
+    "How would you evaluate whether a classification model is performing well? Walk me through the metrics you'd use.",
+    "Explain the bias-variance tradeoff in your own words.",
+    "How do you handle class imbalance in a supervised learning problem?",
+    "Walk me through how you'd design an A/B test for a new product feature.",
+    "Tell me about a time you had to explain a complex model result to a non-technical stakeholder.",
+    "What's the difference between L1 and L2 regularisation, and when would you use each?"
+  ],
+  swe: [
+    "Tell me about a challenging technical problem you solved recently.",
+    "Explain how you'd design a rate limiter for an API.",
+    "Walk me through the difference between a hash map and a binary search tree.",
+    "How do you approach writing tests for your code?",
+    "Describe a system you'd architect for a URL shortener at scale.",
+    "Tell me about a time you had a disagreement with a teammate on a technical decision.",
+    "How do you ensure code quality in a team setting?"
+  ],
+  pm: [
+    "Tell me about a product you've built or managed end-to-end.",
+    "How would you prioritise features when you have 10 requests and bandwidth for 3?",
+    "Walk me through how you'd define success metrics for a new onboarding flow.",
+    "Tell me about a time a product decision you made turned out to be wrong.",
+    "How would you approach launching a new feature in a market you don't know well?",
+    "How do you balance user needs vs business goals?",
+    "Describe how you'd run a discovery process for a new product area."
+  ],
+  ml: [
+    "How do you approach deploying a model to production for the first time?",
+    "What strategies do you use to detect model drift after deployment?",
+    "Walk me through how you'd design an ML pipeline from data ingestion to serving.",
+    "Tell me about a production ML incident you handled.",
+    "How do you version models and ensure reproducibility?",
+    "What trade-offs do you consider when choosing batch vs real-time inference?",
+    "Explain how you'd optimise a model for low-latency serving."
+  ],
+  analyst: [
+    "Tell me about the most impactful analysis you've done and what decision it drove.",
+    "How would you write a SQL query to find the top 10 customers by revenue over the last 30 days?",
+    "Walk me through how you'd build a dashboard to track product health.",
+    "How do you validate whether your analysis is correct before presenting it?",
+    "Tell me about a time your data told a story that surprised stakeholders.",
+    "How would you define and track the north star metric for a subscription product?",
+    "What's your process when you get a vague data request from a business partner?"
+  ],
+  de: [
+    "Walk me through how you'd design a data pipeline from raw events to a reporting layer.",
+    "How do you handle schema evolution in a data warehouse?",
+    "What strategies do you use to ensure data quality in a pipeline?",
+    "Tell me about a production pipeline failure you debugged and fixed.",
+    "How would you design a real-time streaming pipeline using Kafka?",
+    "What's the difference between a star schema and a snowflake schema?",
+    "How do you choose between batch and streaming architecture for a use case?"
+  ]
+};
+
+function getFallbackQ(n) {
+  const qs = FALLBACK_QS[roleKey] || FALLBACK_QS.ds;
+  return qs[n % qs.length];
+}
+
+// MIC
+function toggleMic() {
+  if (!('webkitSpeechRecognition' in window || 'SpeechRecognition' in window)) {
+    alert('Voice input requires Chrome browser.');
+    return;
+  }
+  if (isRec) {
+    recognition?.stop();
+    return;
+  }
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  recognition = new SR();
+  recognition.continuous = true; recognition.interimResults = true;
+  recognition.onresult = e => {
+    let t = '';
+    for (let i = e.resultIndex; i < e.results.length; i++) t += e.results[i][0].transcript;
+    document.getElementById('ans-inp').value = t;
+  };
+  recognition.onend = () => { isRec=false; document.getElementById('btn-mic').classList.remove('rec'); };
+  recognition.start();
+  isRec = true;
+  document.getElementById('btn-mic').classList.add('rec');
+}
+
+// END INTERVIEW
+function endInterview() {
+  if (interviewDone) return;
+  if (questionNum < 2 && !confirm('End interview early?')) return;
+  interviewDone = true;
+  disableInput();
+  addAriaMsg("Thank you — let me compile your full evaluation now...");
+  setTimeout(() => generateReport(), 1500);
+}
+
+
+// FINAL REPORT
+async function generateReport() {
+  const role = ROLES[roleKey];
+  const overall = Math.round(DIMS.reduce((s,d)=>s+scores[d.key],0)/DIMS.length);
+  
+  // Build transcript snippet
+  const transcript = history
+    .filter(h => h.role==='user' && h.content.startsWith('The candidate just answered'))
+    .map(h => { const m = h.content.match(/CANDIDATE ANSWER: "([^"]+)"/); return m?m[1]:''; })
+    .filter(Boolean).join('\n---\n');
+
+  const scoringSystem = `You are a fair, bias-aware hiring evaluator assessing a ${role.title} candidate.
+Produce ONLY a JSON object with this exact structure:
+{"scores":{"technical":{"score":75,"evidence":"exact quote or paraphrase from candidate","reasoning":"why this score"},"communication":{"score":75,"evidence":"...","reasoning":"..."},"problem_solving":{"score":75,"evidence":"...","reasoning":"..."},"behavioral":{"score":75,"evidence":"...","reasoning":"..."},"confidence":{"score":75,"evidence":"...","reasoning":"..."}},"overall":75,"hire_signal":"strong_yes|yes|maybe|no","top_strength":"one specific sentence","top_concern":"one specific sentence","bias_check":"none detected|flag description","summary":"2-3 sentences"}
+
+BIAS RULES: Score based on content correctness only. Never penalise accent, speech pace, or communication style. Flag if you detect any bias in scoring.`;
+
+  let report = null;
+  try {
+    const raw = await groqCall(scoringSystem, [
+      { role:'user', content:`Evaluate this ${role.title} interview.\n\nTRANSCRIPT:\n${transcript || 'Short interview'}\n\nSIGNAL SCORES:\n${JSON.stringify(scores)}\n\nGenerate final explainable scorecard.` }
+    ], 1200);
+    report = parseJSON(raw);
+  } catch(e) { console.error(e); }
+
+  if (!report) {
+    report = {
+      overall,
+      hire_signal: overall>=72?'yes':overall>=55?'maybe':'no',
+      top_strength: 'Demonstrated relevant domain knowledge and clear communication.',
+      top_concern: 'Some areas would benefit from deeper technical elaboration.',
+      bias_check: 'none detected',
+      summary: `${candidateName} completed the ${role.title} interview with an overall score of ${overall}/100. The candidate showed engagement across multiple evaluation dimensions.`,
+      scores: Object.fromEntries(DIMS.map(d=>[d.key,{score:scores[d.key],evidence:'Based on interview responses',reasoning:'Aggregated from session signals'}]))
+    };
+  }
+
+  renderReport(report);
+}
+
+function renderReport(r) {
+  const role = ROLES[roleKey];
+  const ov = r.overall || Math.round(DIMS.reduce((s,d)=>s+scores[d.key],0)/DIMS.length);
+  const hireMap = {
+    strong_yes: {label:'Strong Hire',  color:'var(--green)',  bg:'rgba(62,207,142,.1)'},
+    yes:        {label:'Hire',         color:'var(--accent2)',bg:'rgba(79,142,255,.1)'},
+    maybe:      {label:'Maybe',        color:'var(--amber)',  bg:'rgba(245,166,35,.1)'},
+    no:         {label:'No Hire',      color:'var(--red)',    bg:'rgba(255,95,95,.1)'},
+  };
+  const hire = hireMap[r.hire_signal] || hireMap.maybe;
+
+  const dimsHtml = DIMS.map(d => {
+    const s = r.scores?.[d.key] || {};
+    const score = s.score ?? scores[d.key] ?? 60;
+    return `<div class="rd-row">
+      <div class="rd-top">
+        <span class="rd-name">${d.label}</span>
+        <div class="rd-bar-bg"><div class="rd-bar-fill" style="width:${score}%;background:${d.color}"></div></div>
+        <span class="rd-score" style="color:${d.color}">${score}</span>
+      </div>
+      ${s.evidence?`<div class="rd-evidence">"${s.evidence}"</div>`:''}
+    </div>`;
+  }).join('');
+
+  document.getElementById('rp-sub').textContent = `${candidateName} · ${role.title} · ${new Date().toLocaleDateString()}`;
+  document.getElementById('rp-content').innerHTML = `
+    <div class="rp-grid">
+      <div class="rp-card">
+        <div class="rpc-title">Overall score</div>
+        <div class="rpc-big" style="background:linear-gradient(135deg,${hire.color},var(--accent2));-webkit-background-clip:text;-webkit-text-fill-color:transparent">${ov}</div>
+        <div class="rpc-lbl">out of 100</div>
+        <div class="hire-pill" style="background:${hire.bg};color:${hire.color};margin-top:10px;display:inline-block">${hire.label}</div>
+      </div>
+      <div class="rp-card">
+        <div class="rpc-title">Key insights</div>
+        <div style="display:flex;gap:8px;padding:8px 0;border-bottom:1px solid var(--border);font-size:13px;line-height:1.6">
+          <span style="color:var(--green);flex-shrink:0">↑</span>
+          <span><strong>Strength:</strong> ${r.top_strength}</span>
+        </div>
+        <div style="display:flex;gap:8px;padding:8px 0;font-size:13px;line-height:1.6">
+          <span style="color:var(--amber);flex-shrink:0">↓</span>
+          <span><strong>Concern:</strong> ${r.top_concern}</span>
+        </div>
+      </div>
+      <div class="rp-card full">
+        <div class="rpc-title">Score breakdown</div>
+        ${dimsHtml}
+      </div>
+      <div class="rp-card full">
+        <div class="rpc-title">Summary</div>
+        <p style="font-size:13px;line-height:1.75;color:var(--muted)">${r.summary}</p>
+        <div class="bias-box" style="margin-top:14px">
+          <span style="flex-shrink:0">✓</span>
+          <div><strong>Bias audit:</strong> ${r.bias_check||'No bias indicators detected in scoring methodology.'}</div>
+        </div>
+      </div>
+    </div>`;
+
+  document.getElementById('report').classList.add('show');
+}
+
+</script>
+</body>
+</html>
