@@ -32,7 +32,6 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--f
 body::after{content:'';position:fixed;inset:0;background-image:url("data:image/svg+xml,%3Csvg width='60' height='60' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M0 0h60v60H0z' fill='none'/%3E%3Cpath d='M30 0v60M0 30h60' stroke='%23ffffff' stroke-width='0.15' stroke-opacity='0.03'/%3E%3C/svg%3E");pointer-events:none;z-index:0}
 body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellipse 70% 50% at 15% 0%,rgba(79,142,255,0.07) 0%,transparent 55%),radial-gradient(ellipse 50% 40% at 90% 100%,rgba(167,139,250,0.05) 0%,transparent 50%);pointer-events:none;z-index:0}
 
-/* ── KEY SCREEN ── */
 #key-screen{position:fixed;inset:0;z-index:300;display:flex;align-items:center;justify-content:center;background:var(--bg)}
 #key-screen.gone{display:none}
 .key-card{width:440px;background:var(--s1);border:1px solid var(--border2);border-radius:18px;padding:36px;position:relative;overflow:hidden}
