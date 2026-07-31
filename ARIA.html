@@ -345,9 +345,6 @@ let roleKey = 'ds';
 let questionNum = 0;
 const MAX_Q = 7;
 let busy = false;
-// Detects a genuine skip/decline — "no", "idk", "skip", "pass", etc.
-// Deliberately strict (whole-message match) so it never misfires on a real
-// answer that happens to contain the word "no".
 const SKIP_RE = /^(no|nah|nope|skip|pass|i\s*don'?t\s*know|i\s*do\s*not\s*know|idk|not\s*sure|no\s*idea|dono|dunno)[\.\!\?]*$/i;
 function isSkipAnswer(text) {
   return SKIP_RE.test(text.trim());
