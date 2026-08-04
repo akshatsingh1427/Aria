@@ -425,9 +425,6 @@ async function startInterview() {
   setTimeout(() => askFirstQuestion(), 1200);
 }
 
-// ════════════════════════════════════════════
-// CAMERA
-// ════════════════════════════════════════════
 async function initCamera() {
   try {
     const stream = await navigator.mediaDevices.getUserMedia({ video:true, audio:true });
